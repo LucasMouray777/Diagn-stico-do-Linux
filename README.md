@@ -1,4 +1,4 @@
-Diagnóstico de Linux
+Diagnóstico do Linux
 
 ## Objetivo
 
