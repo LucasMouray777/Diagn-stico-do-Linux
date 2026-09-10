@@ -1,4 +1,4 @@
-Trabalho Linux — Processos
+Diagnóstico de Linux
 
 ## Objetivo
 
