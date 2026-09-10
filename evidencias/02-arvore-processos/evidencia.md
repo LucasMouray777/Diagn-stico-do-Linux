@@ -1,4 +1,4 @@
-# Questão 2 — Árvore de processos
+# Questão 2 — Árvore de Processos
 
 ## Comando
 
