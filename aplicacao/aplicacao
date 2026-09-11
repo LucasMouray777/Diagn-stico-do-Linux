@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""
+monitor.py
+
+Aplicação simples usada como objeto do diagnóstico de processos.
+Ela roda indefinidamente, possui uma thread principal e uma thread
+de trabalho (worker), o que permite observar múltiplas threads (item 6)
+e coletar estado/CPU/memória em diferentes momentos (itens 3 e 4).
+
+Como executar:
+    python3 monitor.py
+
+Para rodar em segundo plano e liberar o terminal:
+    python3 monitor.py &
+    echo $!      # mostra o PID do processo criado
+
+Para encerrar de forma controlada, use os sinais pedidos no trabalho:
+    kill -STOP <PID>    # pausa (SIGSTOP)
+    kill -CONT <PID>    # retoma (SIGCONT)
+    kill -TERM <PID>    # encerra (SIGTERM)
+"""
+
+import os
+import signal
+import sys
+import threading
+import time
+
+
+def worker(nome: str, intervalo: float) -> None:
+    """Thread secundária: simula um trabalho contínuo em segundo plano."""
+    contador = 0
+    while True:
+        contador += 1
+        # flush=True garante que a mensagem apareça na hora, mesmo quando
+        # a saída não é um terminal (ex: rodando em segundo plano com &
+        # ou redirecionada para um arquivo de log).
+        print(
+            f"[{nome}] PID={os.getpid()} TID(via threading)={threading.get_ident()} "
+            f"iteracao={contador}",
+            flush=True,
+        )
+        time.sleep(intervalo)
+
+
+def tratar_sigterm(signum, frame):
+    """Mostra uma mensagem visível antes de encerrar ao receber SIGTERM.
+    Útil como evidência de que o sinal foi realmente recebido e tratado."""
+    print(f"[monitor.py] SIGTERM recebido (PID={os.getpid()}). Encerrando...", flush=True)
+    sys.exit(0)
+
+
+def main() -> None:
+    pid = os.getpid()
+    ppid = os.getppid()
+    print(f"Processo principal iniciado. PID={pid}  PPID={ppid}", flush=True)
+    print("Pressione Ctrl+C para encerrar em primeiro plano, ou use 'kill' "
+          "a partir de outro terminal quando rodar em segundo plano.", flush=True)
+
+    signal.signal(signal.SIGTERM, tratar_sigterm)
+
+    # Cria a thread de trabalho (segunda thread do processo)
+    t = threading.Thread(target=worker, args=("worker-thread", 3), daemon=True)
+    t.start()
+
+    try:
+        # A thread principal também executa um laço de trabalho
+        worker("main-thread", 2)
+    except KeyboardInterrupt:
+        print(f"[monitor.py] Interrompido pelo teclado (PID={pid}). Encerrando...", flush=True)
+
+
+if __name__ == "__main__":
+    main()
