@@ -1,0 +1,33 @@
+# Evidência — Threads
+
+```bash
+ps -L -p 24287
+```
+```
+PID     LWP  TTY  TIME  CMD
+24287  24378  ?  00:00:00  Worker Launcher
+24287  24379  ?  00:00:01  Softwar~cThread
+24287  24380  ?  00:00:00  Renderer
+24287  24381  ?  00:00:00  WRWorker#0
+24287  24382  ?  00:00:00  WRWorkerLP#0
+24287  24383  ?  00:00:00  WrGlyph~terizer
+24287  24384  ?  00:00:00  Compositor
+24287  24385  ?  00:00:00  CanvasRenderer
+24287  24386  ?  00:00:00  ImageIO
+... (69 threads no total)
+```
+
+```bash
+cat /proc/24287/status | grep Threads
+```
+```
+Threads:	69
+```
+
+## Interpretação
+
+O Firefox é fortemente multithreaded: apenas o processo principal já possui 69 threads (LWPs —
+Lightweight Processes), cada uma com função especializada (renderização, áudio, banco de dados
+SQLite, resolução DNS, etc.). Diferente de processos separados, threads de um mesmo processo
+compartilham o mesmo espaço de memória e descritores de arquivo, tornando a comunicação entre elas
+mais rápida, mas exigindo sincronização cuidadosa para evitar condições de corrida.
