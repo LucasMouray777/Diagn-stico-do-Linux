@@ -6,7 +6,7 @@ Trabalho 1 — Diagnóstico de Processos em Linux
 - Aluno(s): Lucas Moura, Davi Mota
 - Processo analisado: Firefox (navegador) 
 
-1. Descrição da aplicação e justificativa
+### 1. Descrição da aplicação e justificativa ###
 
 O processo escolhido foi o Firefox (instalado via Snap), um navegador de código aberto amplamente usado. A escolha se justifica porque:
 
