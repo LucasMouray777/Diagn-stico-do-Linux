@@ -3,7 +3,7 @@ Trabalho 1 — Diagnóstico de Processos em Linux
 - Disciplina: Sistemas Operacionais — ADS 
 - Faculdade: Serra Dourada 
 - Professor: Guibson Krause 
-- Aluno(s): Lucas Moura, Davi Mota
+- Aluno(s): Lucas Moura e Davi Mota
 - Processo analisado: Firefox (navegador) 
 
 ### 1. Descrição da aplicação e justificativa ###
