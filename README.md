@@ -1,193 +1,122 @@
-Diagnóstico do Linux
-
 Trabalho 1 — Diagnóstico de Processos em Linux
 
-- Disciplina: Sistemas Operacionais — ADS 
-- Aluno(s): Lucas Moura e Davi Mota
-- Processo analisado: Firefox (navegador)
+Disciplina: Sistemas Operacionais — ADS 
+Faculdade: Serra Dourada 
+Professor: Guibson Krause 
+Aluno(s): Lucas Moura, Davi Mota
+Processo analisado: Firefox (navegador) 
 
 1. Descrição da aplicação e justificativa
 
-O processo escolhido foi o Firefox (instalado via Snap), um navegador de código aberto muito utilizado. A escolha foi feita porque é um processo de usuário que pode ser interrompido, retomado ou encerrado sem impactar o sistema operacional. Ele também tem uma estrutura interessante para análise: possui vários processos filhos (multiprocesso) e múltiplas threads por processo, o que ajuda a entender conceitos como hierarquia, threads e o diretório /proc.
+O processo escolhido foi o Firefox (instalado via Snap), um navegador de código aberto amplamente usado. A escolha se justifica porque:
+
+É um processo de usuário seguro para manipular (não é serviço crítico do sistema);
+Pode ser interrompido, retomado e encerrado sem afetar o SO;
+Apresenta uma estrutura rica para o diagnóstico: múltiplos processos filhos (multiprocesso) e múltiplas threads por processo, permitindo observar bem os conceitos de hierarquia, threads e /proc.
 
 2. Ambiente utilizado
-
-Distribuição: Ubuntu (xunbutu4)
-
-Tipo de máquina: VM (VirtualBox — usuário vboxuser)
-
-Instalação do Firefox: pacote Snap (/snap/firefox/6966/...)
+Item	Detalhe
+Distribuição	Ubuntu
+Máquina	VM (VirtualBox) — usuário vboxuser
+Instalação do Firefox	Pacote Snap (/snap/firefox/6966/...)
 
 3. Como executar a aplicação analisada
-
 bash
-
 firefox &
 
-O Firefox foi iniciado normalmente pela interface gráfica (ícone do sistema), o que faz com que, após a inicialização, o processo pai original (o processo que o lançou) termine e o Firefox seja “adotado” pelo processo init/systemd (PID 1) — por isso o PPID observado é 1.
+O Firefox foi iniciado normalmente pela interface gráfica. Após a inicialização, o processo pai original (que o lançou) termina, e o Firefox é "adotado" pelo init/systemd (PID 1) — por isso o PPID observado é 1.
 
-4. Comandos utilizados (na ordem do experimento)
+4. Comandos utilizados
 
-Ver detalhamento completo em comandos/comandos-utilizados.md.
+Lista completa e comentada em comandos/comandos-utilizados.md.
 
 bash
-
 pgrep -a firefox
-
 ps -o pid,ppid,stat,pri,ni,%cpu,%mem,cmd -p 24287
-
 pstree -p 24287
-
 ps -L -p 24287
-
 cat /proc/24287/status
-
 cat /proc/24287/stat
-
 cat /proc/24287/limits
-
 kill -STOP 24287
-
 kill -CONT 24287
-
 renice 5 -p 24287
-
 kill -TERM 24287
-
 ps -p 24287
-
 5. Evidências e interpretação por requisito
+5.1 PID e PPID
 
-5.1 PID e PPID (evidencias/01-pid-ppid/)
+Diretório: evidencias/01-pid-ppid/
 
-pgrep -a firefox
+PID: 24287   PPID: 1
 
-24287 /snap/firefox/6966/usr/lib/firefox/firefox
+Interpretação: o PID identifica unicamente o processo; o PPID 1 mostra que, após o reparenting automático do kernel (quando o processo lançador original termina), o Firefox passa a ser filho do init/systemd.
 
-ps -o pid,ppid,stat,pri,ni,%cpu,%mem,cmd -p 24287
+5.2 Árvore de processos
 
-24287       1 Sl   19   0  0.3 16.9 /snap/firefox/6966/usr/lib/firefox/firefox
+Diretório: evidencias/02-arvore-processos/
 
-Interpretação: O PID (Process ID) 24287 identifica unicamente o processo do Firefox no sistema. O PPID (Parent Process ID) é 1, ou seja, o processo pai é o init/systemd. Isso acontece porque, ao iniciar o Firefox pela interface gráfica, o processo que o lançou termina logo após a criação do Firefox, e o kernel encarrega o processo de PID 1 de cuidar dele — esse é o mecanismo de “reparenting", que ajuda a monitorar o processo quando ele termina.
+O Firefox usa arquitetura multiprocesso: o processo principal cria, via forkserver, filhos especializados — RDD Process (mídia), Socket Process (rede), Utility Process, vários Web Content (isolamento por aba/site) e WebExtensions — cada um com suas próprias threads.
 
-5.2 Árvore de processos (evidencias/02-arvore-processos/)
+Interpretação: esse modelo pai → filho via fork()/exec() isola falhas: se uma aba travar, apenas o Web Content daquela aba é afetado, não o navegador inteiro.
 
-firefox(24287)─┬─forkserver(24388)─┬─Privileged Cont(24420)─┬─{Privileged Cont}(24424)
+5.3 Estado do processo
 
-│                   ├─RDD Process(24428)
-
-│                   ├─Socket Process(24391)
-
-│                   ├─Utility Process(24563)
-
-│                   ├─Web Content(24570)
-
-│                   ├─Web Content(24576)
-
-│                   ├─Web Content(24613)
-
-│                   └─WebExtensions(24506)
-
-├─{firefox}(24328) ... (dezenas de threads do processo principal)
-
-Interpretação: O Firefox usa uma arquitetura multiprocesso: o processo principal (24287) cria processos filhos especializados — como RDD Process (decodificação de mídia), Socket Process (rede), Utility Process, Web Content (um por grupo de abas) e WebExtensions (extensões). Cada um desses filhos tem várias threads, mostradas entre chaves pelo pstree. Essa estrutura reflete como os processos são criados com fork() e exec(), ajudando a isolar falhas e melhorar segurança e desempenho.
-
-5.3 Estado do processo (evidencias/03-estado-recursos/)
+Diretório: evidencias/03-estado-recursos/
 
 Momento	STAT	Significado
+Repouso	Sl	S = sleeping; l = multithreaded
+Após SIGSTOP	Tl	T = stopped
+Após SIGCONT	Sl	Retomado
 
-Em repouso	Sl	S = sleeping (dormindo, esperando evento como I/O); l = multithreaded
+Interpretação: S é o estado normal de um processo interativo — a maior parte do tempo é gasta esperando eventos (I/O, rede, entrada do usuário), sem consumir CPU ativamente.
 
-Após kill -STOP	Tl	T = stopped (parado por sinal de controle de job); ainda multithread
+5.4 CPU e memória
 
-Após kill -CONT	Sl	Retornou ao estado de espera normal
+Diretório: evidencias/03-estado-recursos/
 
-Interpretação: O estado S é comum para processos interativos como o navegador: ele fica dormindo na maior parte do tempo, esperando eventos como entrada do usuário ou rede. O estado T ocorre quando enviamos o sinal SIGSTOP, que pausa o processo até receber SIGCONT. O processo continua na memória, mas não roda mais até ser retomado.
+Momento	%CPU	%MEM	VmRSS
+Repouso	0.3%	16.9%	341.440 kB (~333 MB)
 
-5.4 CPU e memória (evidencias/03-estado-recursos/)
+Interpretação: em repouso, o Firefox já reserva bastante memória (cache, motor JS, processos de renderização ativos), mas consome pouca CPU.
 
-Momento 1 (repouso):
+5.5 Prioridade e nice
 
-%CPU 0.3   %MEM 16.9   VmRSS: 341440 kB (~333 MB)
+Diretório: evidencias/03-estado-recursos/
 
-Momento 2 (sob carga): [PREENCHER — abrir várias abas, tocar um vídeo, e capturar novamente ps -o pid,%cpu,%mem,rss -p 24287 para comparação]
+	PRI	NI
+Antes	19	0
+Depois de renice 5 -p 24287	14	5
 
-Interpretação: Em repouso, o Firefox consome pouca CPU (0,3%) mas muita memória (~333 MB), como é comum em navegadores que mantêm cache e processos de renderização ativos. Uma segunda medição sob carga é necessária para mostrar como o consumo de CPU aumenta com atividade, como rolagem de página ou vídeo.
+Interpretação: o nice (NI) vai de -20 a 19 e é o ajuste que o usuário pede ao kernel para a prioridade de escalonamento. Aumentar para 5 pede menos prioridade de CPU. O PRI caiu de 19 para 14 porque já reflete a prioridade dinâmica calculada pelo escalonador CFS.
 
-5.5 Prioridade e nice (evidencias/03-estado-recursos/)
+5.6 Threads
 
-Antes:  PRI 19   NI 0
+Diretório: evidencias/04-threads/
 
-renice 5 -p 24287
+Threads: 69
 
-24287 (process ID) old priority 0, new priority 5
+Interpretação: o Firefox é fortemente multithreaded — 69 threads só no processo principal, cada uma especializada (renderização, áudio, SQLite, DNS...). Threads de um mesmo processo compartilham memória e descritores de arquivo, diferente de processos separados.
 
-Depois: PRI 14   NI 5
+5.7 /proc/PID
 
-Interpretação: O valor nice varia de -20 (maior prioridade) a 19 (menor prioridade). Aumentar o nice de 0 para 5 quer dizer que o processo terá menos prioridade de CPU. O campo PRI do ps diminui de 19 para 14, o que é esperado, pois reflete a prioridade efetiva do escalonador. O importante é que o nice maior significa que o processo cede mais o processador para outros.
+Diretório: evidencias/05-proc/
 
-5.6 Threads (evidencias/04-threads/)
+Arquivo	O que mostra
+status	Resumo legível: estado, PPid, memória, nº de threads
+stat	Dados "crus" usados pelo kernel/ps/top
+limits	Limites de recursos (arquivos abertos, processos, pilha)
+5.8 Sinais: SIGSTOP, SIGCONT, SIGTERM
 
-ps -L -p 24287
+Diretório: evidencias/06-sinais/
 
-PID     LWP  TTY  TIME  CMD
+Sinal	Efeito observado
+SIGSTOP	STAT Sl → Tl (processo suspenso, continua na memória)
+SIGCONT	STAT Tl → Sl (retomado de onde parou)
+SIGTERM	Processo removido da tabela de processos (ps -p sem saída)
 
-24287  24378  ?  00:00:00  Worker Launcher
-
-24287  24379  ?  00:00:01  Softwar~cThread
-
-24287  24380  ?  00:00:00  Renderer
-
-24287  24381  ?  00:00:00  WRWorker#0
-
-...
-
-Threads: 69   (confirmado em /proc/24287/status)
-
-Interpretação: O Firefox é muito multithreaded: o processo principal tem 69 threads, cada uma com uma tarefa específica (renderização, áudio, banco de dados, DNS, etc.). As threads compartilham memória e arquivos, o que torna a comunicação mais rápida, mas exige cuidado com sincronização para evitar problemas.
-
-5.7 /proc/PID (evidencias/05-proc/)
-
-Fontes exploradas:
-
-/proc/24287/status — resumo legível do estado do processo: nome, estado (S), PPid (1), UID/GID, uso de memória detalhado (VmRSS: 341440 kB), número de threads (69), máscara de sinais bloqueados/ignorados (SigBlk, SigIgn).
-
-/proc/24287/stat — versão “crua” usada pelo kernel/ferramentas como ps e top para extrair estado, tempos de CPU em modo usuário/kernel e prioridade — é a fonte primária de onde ps deriva boa parte dos campos exibidos.
-
-/proc/24287/limits — limites de recursos aplicados ao processo: máximo de arquivos abertos, máximo de processos, tamanho de pilha, entre outros — útil para diagnosticar erros como “too many open files".
-
-[PREENCHER — 4ª fonte, ex: /proc/24287/cmdline ou /proc/24287/fd]
-
-bash
-
-cat /proc/24287/cmdline | tr '\0'' '
-
-Mostra a linha de comando exata usada para iniciar o processo (útil para confirmar com quais argumentos a aplicação foi executada).
-
-5.8 Sinais: SIGSTOP, SIGCONT, SIGTERM (evidencias/06-sinais/)
-
-kill -STOP 24287
-
-ps → STAT: Tl   (processo suspenso)
-
-kill -CONT 24287
-
-ps → STAT: Sl   (processo retomado, volta a dormir/aguardar)
-
-kill -TERM 24287
-
-ps -p 24287 → (sem saída — processo encerrado)
-
-Interpretação:
-
-SIGSTOP suspende a execução do processo imediatamente, sem que ele possa interceptar ou ignorar o sinal. O processo continua na memória, mas não roda até receber SIGCONT.
-
-SIGCONT retoma a execução exatamente de onde parou, devolvendo o processo ao escalonador.
-
-SIGTERM é um sinal de encerramento que o processo pode capturar para fazer limpeza antes de sair — diferente de SIGKILL, que mata o processo sem opção de tratamento. Após o SIGTERM, o processo é removido da tabela do kernel.
-
-A diferença entre pausar (SIGSTOP) e terminar (SIGTERM) é que pausar mantém o processo vivo na memória, enquanto terminar libera os recursos e remove o processo da tabela do kernel.
+Interpretação: SIGSTOP/SIGCONT controlam execução sem destruir o processo; SIGTERM pede encerramento (e pode ser tratado pelo processo antes de sair), diferente do SIGKILL, que mata incondicionalmente.
 
 6. Interpretação técnica geral / Conclusão
 
-O experimento com o Firefox permitiu observar de forma prática vários conceitos centrais de Sistemas Operacionais: a relação de hierarquia pai-filho (o Firefox sendo adotado pelo PID 1 após reparenting), a arquitetura multiprocesso e multithread usada para isolamento e desempenho, o significado prático dos estados de processo (S, T) e suas transições provocadas por sinais de controle de job, o papel do nice/renice no ajuste da prioridade de escalonamento sem controle direto do usuário sobre o algoritmo do escalonador, e a diferença semântica entre suspender e encerrar um processo. A interface /proc se mostrou uma fonte rica e acessível de introspecção do kernel sobre processos em execução, permitindo diagnósticos sem ferramentas adicionais. A comparação de CPU e memória em carga mostrou que o Firefox consome recursos significativos, especialmente quando abertas várias guias, o que pode afetar o desempenho geral do sistema. Houve também algumas anomalias, como a dificuldade em identificar corretamente os processos filhos em alguns casos, o que pode ser um limite da interface /proc. Além disso, a prioridade de escalonamento ajustada pelo nice não teve um impacto muito visível durante o teste, o que pode indicar que o algoritmo do escalonador é mais complexo do que se esperava.
+O experimento com o Firefox permitiu observar na prática: a relação pai-filho via reparenting, a arquitetura multiprocesso/multithread para isolamento e desempenho, os estados de processo e suas transições por sinais de controle de job, o papel do nice/renice no escalonamento, e a diferença entre suspender e encerrar um processo. A interface /proc se mostrou uma fonte rica de introspecção do kernel, acessível sem ferramentas adicionais.
