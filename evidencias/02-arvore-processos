@@ -1,0 +1,30 @@
+# Evidência — Árvore de processos
+
+```bash
+pstree -p 24287
+```
+```
+firefox(24287)─┬─forkserver(24388)─┬─Privileged Cont(24420)─┬─{Privileged Cont}(24424)
+               │                   │                        └─... (mais threads)
+               │                   ├─RDD Process(24428)─┬─{RDD Process}(24433)
+               │                   │                    └─... 
+               │                   ├─Socket Process(24391)─┬─{Socket Process}(24394)
+               │                   │                       └─...
+               │                   ├─Utility Process(24563)─┬─{Utility Process}(24566)
+               │                   │                        └─...
+               │                   ├─Web Content(24570)─┬─{Web Content}(24573)
+               │                   │                    └─... (várias instâncias de Web Content)
+               │                   └─WebExtensions(24506)─┬─{WebExtensions}(24510)
+               │                                          └─...
+               └─{firefox}(24328) ... (dezenas de threads do processo principal)
+```
+
+(lista completa disponível em `Comando_utilizados_no_firefox.txt`, linhas 10–157)
+
+## Interpretação
+
+O Firefox usa arquitetura multiprocesso: o processo principal (24287) cria, via `forkserver`,
+processos filhos especializados — `RDD Process` (mídia), `Socket Process` (rede), `Utility Process`,
+vários `Web Content` (isolamento por site/aba) e `WebExtensions`. Cada um contém múltiplas threads
+(mostradas entre chaves `{}`). Esse modelo pai → filho via `fork()`/`exec()` isola falhas: se uma aba
+travar, apenas o `Web Content` daquela aba é afetado, não o navegador inteiro.
