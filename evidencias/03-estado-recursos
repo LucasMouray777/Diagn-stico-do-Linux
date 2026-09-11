@@ -1,0 +1,51 @@
+# Evidência — Estado, CPU, memória, prioridade e nice
+
+## Estado do processo
+
+| Momento | STAT | Significado |
+|---|---|---|
+| Em repouso | `Sl` | S = sleeping; l = multithreaded |
+| Após `kill -STOP` | `Tl` | T = stopped (parado por sinal) |
+| Após `kill -CONT` | `Sl` | Retornou ao estado de espera |
+
+## CPU e memória
+
+**Momento 1 (repouso):**
+```
+%CPU 0.3   %MEM 16.9   VmRSS: 341440 kB (~333 MB)
+```
+
+**Momento 2 (sob carga):**
+```
+[PREENCHER] — abrir várias abas / tocar vídeo e capturar novamente:
+ps -o pid,%cpu,%mem,rss -p 24287
+```
+
+## Prioridade e nice
+
+```bash
+ps -o pid,ppid,stat,pri,ni,%cpu,%mem,cmd -p 24287   # antes
+```
+```
+PRI 19   NI 0
+```
+```bash
+renice 5 -p 24287
+```
+```
+24287 (process ID) old priority 0, new priority 5
+```
+```bash
+ps -o pid,ppid,stat,pri,ni,%cpu,%mem,cmd -p 24287   # depois
+```
+```
+PRI 14   NI 5
+```
+
+## Interpretação
+
+O estado `S` é típico de processos interativos como o navegador, que passam a maior parte do tempo
+aguardando eventos (entrada, rede, renderização). O nice foi alterado de 0 para 5, pedindo ao kernel
+menos prioridade de CPU para esse processo — o PRI efetivo caiu de 19 para 14, refletindo o cálculo
+dinâmico do escalonador CFS. Em repouso, o consumo de CPU é baixo (0,3%), mas a memória residente é
+alta (~333 MB), comportamento esperado de navegadores modernos.
