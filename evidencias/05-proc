@@ -1,0 +1,44 @@
+# Evidência — /proc/PID
+
+## /proc/24287/status
+
+```
+Name:	firefox
+State:	S (sleeping)
+Pid:	24287
+PPid:	1
+Threads:	69
+VmRSS:	  341440 kB
+VmSize:	 3054352 kB
+```
+
+Resumo legível do estado do processo, incluindo memória detalhada e número de threads.
+
+## /proc/24287/stat
+
+```
+24287 (firefox) S 1 2064 2064 0 -1 4194560 326546 14116 662 67 2035 829 7 37 20 0 65 0 7029903 ...
+```
+
+Versão "crua" usada pelo kernel e por ferramentas como `ps`/`top` para extrair estado, tempos de CPU
+e prioridade — é a fonte primária de onde `ps` deriva boa parte dos campos exibidos.
+
+## /proc/24287/limits
+
+```
+Limit                     Soft Limit           Hard Limit           Units
+Max processes             7509                 7509                 processes
+Max open files            65536                524288               files
+Max stack size            8388608              unlimited            bytes
+```
+
+Limites de recursos aplicados ao processo — útil para diagnosticar erros de limite de arquivos
+abertos ou processo sendo restringido pelo sistema.
+
+## [PREENCHER] 4ª fonte — ex: /proc/24287/cmdline
+
+```bash
+cat /proc/24287/cmdline | tr '\0' ' '
+```
+
+Mostra a linha de comando exata usada para iniciar o processo (argumentos/flags utilizados).
