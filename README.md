@@ -2,9 +2,9 @@ Diagnóstico do Linux
 
 Trabalho 1 — Diagnóstico de Processos em Linux
 
-Disciplina: Sistemas Operacionais — ADS 
-Aluno(s): Lucas Moura e Davi Mota
-Processo analisado: Firefox (navegador)
+- Disciplina: Sistemas Operacionais — ADS 
+- Aluno(s): Lucas Moura e Davi Mota
+- Processo analisado: Firefox (navegador)
 
 1. Descrição da aplicação e justificativa
 
