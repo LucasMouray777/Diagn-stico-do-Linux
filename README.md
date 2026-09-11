@@ -14,19 +14,21 @@ O processo escolhido foi o Firefox (instalado via Snap), um navegador de código
 Pode ser interrompido, retomado e encerrado sem afetar o SO;
 Apresenta uma estrutura rica para o diagnóstico: múltiplos processos filhos (multiprocesso) e múltiplas threads por processo, permitindo observar bem os conceitos de hierarquia, threads e /proc.
 
-2. Ambiente utilizado
+### 2. Ambiente utilizado ###
+
 Item	Detalhe
 Distribuição	Ubuntu
 Máquina	VM (VirtualBox) — usuário vboxuser
 Instalação do Firefox	Pacote Snap (/snap/firefox/6966/...)
 
-3. Como executar a aplicação analisada
+### 3. Como executar a aplicação analisada ###
+
 bash
 firefox &
 
 O Firefox foi iniciado normalmente pela interface gráfica. Após a inicialização, o processo pai original (que o lançou) termina, e o Firefox é "adotado" pelo init/systemd (PID 1) — por isso o PPID observado é 1.
 
-4. Comandos utilizados
+### 4. Comandos utilizados ###
 
 Lista completa e comentada em comandos/comandos-utilizados.md.
 
@@ -43,7 +45,9 @@ kill -CONT 24287
 renice 5 -p 24287
 kill -TERM 24287
 ps -p 24287
-5. Evidências e interpretação por requisito
+
+### 5. Evidências e interpretação por requisito ###
+   
 5.1 PID e PPID
 
 Diretório: evidencias/01-pid-ppid/
@@ -117,6 +121,6 @@ SIGTERM	Processo removido da tabela de processos (ps -p sem saída)
 
 Interpretação: SIGSTOP/SIGCONT controlam execução sem destruir o processo; SIGTERM pede encerramento (e pode ser tratado pelo processo antes de sair), diferente do SIGKILL, que mata incondicionalmente.
 
-6. Interpretação técnica geral / Conclusão
+### 6. Conclusão ####
 
 O experimento com o Firefox permitiu observar na prática: a relação pai-filho via reparenting, a arquitetura multiprocesso/multithread para isolamento e desempenho, os estados de processo e suas transições por sinais de controle de job, o papel do nice/renice no escalonamento, e a diferença entre suspender e encerrar um processo. A interface /proc se mostrou uma fonte rica de introspecção do kernel, acessível sem ferramentas adicionais.
