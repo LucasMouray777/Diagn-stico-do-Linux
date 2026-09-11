@@ -1,0 +1,49 @@
+# Evidência — Sinais SIGSTOP, SIGCONT, SIGTERM
+
+## SIGSTOP
+
+```bash
+kill -STOP 24287
+ps -o pid,ppid,stat,pri,ni,%cpu,%mem,cmd -p 24287
+```
+```
+  PID    PPID STAT PRI  NI %CPU %MEM CMD
+24287       1 Tl    19   0  0.3 15.4 /snap/firefox/6966/usr/lib/firefox/firefox
+```
+Estado passou de `Sl` para `Tl` (stopped).
+
+## SIGCONT
+
+```bash
+kill -CONT 24287
+ps -o pid,ppid,stat,pri,ni,%cpu,%mem,cmd -p 24287
+```
+```
+  PID    PPID STAT PRI  NI %CPU %MEM CMD
+24287       1 Sl    19   0  0.3 15.4 /snap/firefox/6966/usr/lib/firefox/firefox
+```
+Estado voltou de `Tl` para `Sl` (sleeping) — processo retomado.
+
+## SIGTERM
+
+```bash
+kill -TERM 24287
+ps -p 24287
+```
+```
+ PID TTY          TIME CMD
+(sem saída — processo encerrado)
+```
+
+## Interpretação
+
+- **SIGSTOP** suspende a execução imediatamente, sem que o processo possa interceptar ou ignorar o
+  sinal. Ele permanece na memória, apenas fora do escalonamento (estado `T`).
+- **SIGCONT** retoma a execução exatamente de onde parou, devolvendo o processo ao escalonador
+  (estado `S`).
+- **SIGTERM** é um pedido de encerramento que o processo pode capturar para fazer limpeza antes de
+  sair — diferente do `SIGKILL`, que mata incondicionalmente. Após o `SIGTERM`, o `ps -p 24287` não
+  retorna mais nada, confirmando que o processo foi finalizado e removido da tabela de processos.
+
+A diferença entre pausar (SIGSTOP) e terminar (SIGTERM): pausar mantém o processo vivo na memória (só
+fora do escalonamento); terminar libera os recursos do processo e o remove da tabela de processos.
