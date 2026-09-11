@@ -1,4 +1,4 @@
-Trabalho 1 — Diagnóstico de Processos em Linux
+Trabalho 1 — Diagnóstico do Linux
 
 - Disciplina: Sistemas Operacionais — ADS 
 - Faculdade: Serra Dourada 
