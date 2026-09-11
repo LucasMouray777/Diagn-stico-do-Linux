@@ -21,5 +21,3 @@ O PID `24287` identifica unicamente o processo do Firefox no sistema. O PPID `1`
 processo pai é o `init`/`systemd`: ao ser iniciado pela interface gráfica, o processo lançador
 original termina logo após criar o Firefox, e o kernel reatribui o PPID do processo órfão para o
 PID 1 (reparenting), que passa a ser responsável por "colher" o processo quando ele terminar.
-
-> Adicione aqui a captura de tela correspondente (ex: `pid-ppid.png`).
